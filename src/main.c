@@ -1803,7 +1803,8 @@ VOID _app_tabs_init (
 			_r_listview_addcolumn (hwnd, tab_context->listview_id, 9, L"", -10, LVCFMT_RIGHT);
 			_r_listview_addcolumn (hwnd, tab_context->listview_id, 10, L"", -10, LVCFMT_LEFT);
 
-			_r_listview_addgroup (hwnd, tab_context->listview_id, 0, L"", 0, LVGS_COLLAPSIBLE | LVGS_NOHEADER, LVGS_COLLAPSIBLE | LVGS_NOHEADER);
+			_r_listview_addgroup (hwnd, tab_context->listview_id, LV_GROUP_ID_ALLOWED, L"", 0, LVGS_COLLAPSIBLE, LVGS_COLLAPSIBLE);
+			_r_listview_addgroup (hwnd, tab_context->listview_id, LV_GROUP_ID_BLOCKED, L"", 0, LVGS_COLLAPSIBLE, LVGS_COLLAPSIBLE);
 		}
 
 		// add filter group
@@ -1914,6 +1915,9 @@ VOID _app_initialize (
 
 	// initialize rules array object
 	rules_list = _r_obj_createlist (0x10, &_r_obj_dereference);
+
+	// initialize auto rules list (publisher / path pattern)
+	_app_autorules_initialize ();
 
 	// initialize rules configuration table
 	rules_config = _r_obj_createhashtable (sizeof (ITEM_RULE_CONFIG), 0x10, &_app_dereferenceruleconfig);
@@ -2275,9 +2279,7 @@ INT_PTR CALLBACK DlgProc (
 
 		case WM_THEMECHANGED:
 		{
-			LONG dpi_value;
-
-			dpi_value = _r_dc_getwindowdpi (hwnd);
+			LONG dpi_value = _r_dc_getwindowdpi (hwnd);
 
 			_app_windowloadfont (dpi_value);
 			_app_listview_loadfont (dpi_value, TRUE);
@@ -2347,6 +2349,7 @@ INT_PTR CALLBACK DlgProc (
 						break;
 
 					ShowWindow (hlistview, SW_HIDE);
+					UpdateWindow (hlistview);
 
 					break;
 				}
@@ -2370,6 +2373,7 @@ INT_PTR CALLBACK DlgProc (
 					if (hlistview)
 					{
 						ShowWindow (hlistview, SW_SHOWNA);
+						UpdateWindow (hlistview);
 
 						if (_r_wnd_isvisible (hwnd, TRUE)) // HACK!!!
 							SetFocus (hlistview);
@@ -2816,10 +2820,22 @@ INT_PTR CALLBACK DlgProc (
 
 					return 0;
 				}
+				else if (ctrl_id >= IDX_AUTORULES && ctrl_id < (IDX_AUTORULES + AUTORULES_MAX))
+				{
+					_app_autorules_removefrommenu (hwnd, ctrl_id);
+
+					return 0;
+				}
 			}
 
 			switch (ctrl_id)
 			{
+				case IDM_AUTORULES:
+				{
+					_app_autorules_showmanager (hwnd);
+					break;
+				}
+
 				case IDCANCEL: // process Esc key
 				{
 					if (GetFocus () == config.hsearchbar)
@@ -3320,7 +3336,7 @@ INT_PTR CALLBACK DlgProc (
 					PR_STRING path;
 					HRESULT status;
 
-					status = _r_filedialog_initialize (&file_dialog, PR_FILEDIALOG_OPENFILE);
+					status = _r_filedialog_initialize (&file_dialog, PR_FILEDIALOG_OPENFILE | PR_FILEDIALOG_MULTISELECT);
 
 					if (SUCCEEDED (status))
 					{
@@ -3517,6 +3533,8 @@ INT_PTR CALLBACK DlgProc (
 				case IDM_ZOOM:
 				{
 					ShowWindow (hwnd, IsZoomed (hwnd) ? SW_RESTORE : SW_MAXIMIZE);
+					UpdateWindow (hwnd);
+
 					break;
 				}
 

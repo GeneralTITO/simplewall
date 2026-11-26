@@ -145,6 +145,7 @@ VOID _app_message_localize (
 		// edit submenu
 		_r_menu_setitemtextformat (hmenu, IDM_PURGE_UNUSED, FALSE, L"%s\tCtrl+Shift+X", _r_locale_getstring (IDS_PURGE_UNUSED));
 		_r_menu_setitemtextformat (hmenu, IDM_PURGE_TIMERS, FALSE, L"%s\tCtrl+Shift+T", _r_locale_getstring (IDS_PURGE_TIMERS));
+		_r_menu_setitemtextformat (hmenu, IDM_AUTORULES, FALSE, L"%s...", _r_locale_getstring (IDS_AUTORULES));
 		_r_menu_setitemtextformat (hmenu, IDM_LOGCLEAR, FALSE, L"%s\tCtrl+X", _r_locale_getstring (IDS_LOGCLEAR));
 		_r_menu_setitemtextformat (hmenu, IDM_REFRESH, FALSE, L"%s\tF5", _r_locale_getstring (IDS_REFRESH));
 
@@ -332,6 +333,7 @@ VOID _app_message_localize (
 
 				_r_listview_setcolumn (hwnd, tab_context->listview_id, 7, _r_locale_getstring (IDS_PROTOCOL), 0);
 				_r_listview_setcolumn (hwnd, tab_context->listview_id, 8, _r_locale_getstring (IDS_STATE), 0);
+
 				_r_obj_movereference ((PVOID_PTR)&localized_string, _r_format_string (L"\u2193 %s", _r_locale_getstring (IDS_UPDATE_SPEED)));
 				_r_listview_setcolumn (hwnd, tab_context->listview_id, 9, localized_string->buffer, 0);
 
@@ -1642,7 +1644,16 @@ VOID _app_displayinfolog_callback (
 
 	// set group id
 	if ((lpnmlv->item.mask & LVIF_GROUPID) == LVIF_GROUPID)
-		lpnmlv->item.iGroupId = _app_listview_isitemhidden (lpnmlv->item.lParam) ? LV_HIDDEN_GROUP_ID : 0;
+	{
+		if (_app_listview_isitemhidden (lpnmlv->item.lParam))
+		{
+			lpnmlv->item.iGroupId = LV_HIDDEN_GROUP_ID;
+		}
+		else
+		{
+			lpnmlv->item.iGroupId = ptr_log->is_allow ? LV_GROUP_ID_ALLOWED : LV_GROUP_ID_BLOCKED;
+		}
+	}
 }
 
 BOOLEAN _app_message_displayinfo (
